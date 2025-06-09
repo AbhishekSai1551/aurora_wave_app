@@ -6,50 +6,53 @@
     <title>Aurora Wave Predictions - Coastal Monitoring</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>🌊 Aurora Wave Predictions</h1>
-            <p>Real-time coastal wave monitoring using Microsoft's Aurora Wave model</p>
+            <h1>Aurora Wave Predictions</h1>
+            <p>Real-time coastal wave monitoring using Microsoft's Aurora Wave model for key oceanographic variables.</p>
             <div class="variables-info">
-                <span class="var-tag">Significant Wave Height</span>
-                <span class="var-tag">Mean Wave Period</span>
-                <span class="var-tag">Peak Wave Period</span>
+                <span class="var-tag">Significant Wave Height (SWH)</span>
+                <span class="var-tag">Mean Wave Period (MWP)</span>
+                <span class="var-tag">Peak Wave Period (PP1D)</span>
                 <span class="var-tag">Wind Speed</span>
             </div>
         </header>
 
         <div class="dashboard">
             <div class="map-section">
-                <h3>📍 Coastal Locations</h3>
+                <h3>Global Coastal Locations</h3>
                 <div id="map-container">
                     <div class="loading">Loading interactive map...</div>
                 </div>
             </div>
 
             <div class="controls-section">
-                <h3>🎛️ Controls</h3>
+                <h3>Prediction Controls</h3>
                 
                 <div class="location-selector">
-                    <label for="locationSelect">Select Location:</label>
+                    <label for="locationSelect">Select a Location:</label>
                     <select id="locationSelect">
                         <option value="">Loading locations...</option>
                     </select>
                 </div>
 
                 <div class="prediction-controls">
-                    <label for="stepsSlider">Prediction Steps (6h each): <span id="stepsValue">8</span></label>
+                    <label for="stepsSlider">Forecast Horizon (6-hour steps): <span id="stepsValue">8</span></label>
                     <input type="range" id="stepsSlider" min="1" max="16" value="8">
                 </div>
 
                 <button id="predictBtn" class="predict-button" disabled>
-                    🔮 Get Wave Predictions
+                    Get Wave Predictions
                 </button>
 
                 <div class="current-conditions" id="currentConditions" style="display: none;">
-                    <h4>Current Conditions</h4>
+                    <h4>Latest Forecasted Conditions</h4>
                     <div id="conditionsData"></div>
                 </div>
             </div>
@@ -57,17 +60,17 @@
 
         <div class="charts-section">
             <div class="chart-container">
-                <h3>📈 Wave Period Predictions (Mean & Peak)</h3>
+                <h3>Wave Period Forecast</h3>
                 <div id="wavePeriodChart"></div>
             </div>
 
             <div class="chart-container">
-                <h3>💨 Wave Height & Wind Speed Predictions</h3> {# Updated title #}
-                <div id="waveHeightAndWindChart"></div> {# Updated ID #}
+                <h3>Wave Height & Wind Speed Forecast</h3>
+                <div id="waveHeightAndWindChart"></div>
             </div>
 
             <div class="chart-container">
-                <h3>📊 Multi-Variable Summary</h3>
+                <h3>Current Forecast Summary</h3>
                 <div id="summaryChart"></div>
             </div>
         </div>
