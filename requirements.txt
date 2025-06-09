@@ -1,0 +1,8 @@
+flask==2.3.3
+torch>=2.0.0
+numpy
+plotly==5.17.0
+folium==0.14.0
+gunicorn==21.2.0
+git+https://github.com/microsoft/aurora.git
+
