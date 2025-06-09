@@ -48,8 +48,9 @@ def get_map():
             [lat, lon],
             popup=f"<b>{location}</b><br>Click for wave predictions",
             tooltip=location,
-            icon=folium.Icon(color='blue', icon='info-sign')
-        ).add_to(m) # Changed '...' to 'info-sign' as '...' is not a valid icon name
+            # Removed emoji, using 'info-sign' as a standard icon from Font Awesome (often available in Folium's default icon set)
+            icon=folium.Icon(color='blue', icon='info-sign') 
+        ).add_to(m)
 
     # Convert map to HTML string
     map_html = m._repr_html_()
