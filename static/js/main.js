@@ -32,7 +32,7 @@ function setupEventListeners() {
             $('#currentConditions').hide();
             // Clear charts when new location is selected
             Plotly.newPlot('wavePeriodChart', [], {});
-            Plotly.newPlot('waveHeightAndWindChart', [], {}); // Corrected chart ID
+            Plotly.newPlot('waveHeightAndWindChart', [], {});
             Plotly.newPlot('summaryChart', [], {});
         }
     });
@@ -112,25 +112,33 @@ function plotCharts(predictions) {
         y: mwpValues,
         mode: 'lines+markers',
         name: variables['mwp'],
-        line: { color: '#667eea' }
+        line: { color: '#4A90E2' } // primary-color
     };
     const tracePp1d = {
         x: timestamps,
         y: pp1dValues,
         mode: 'lines+markers',
         name: variables['pp1d'],
-        line: { color: '#764ba2' }
+        line: { color: '#50B7C6' } // secondary-color
     };
     const layoutWavePeriod = {
         title: 'Wave Period Predictions (Mean & Peak)',
         xaxis: { title: 'Time' },
         yaxis: { title: 'Period (s)' },
-        plot_bgcolor: '#f8f9ff',
-        paper_bgcolor: 'white'
+        plot_bgcolor: '#F7F9FC', // var(--bg-light)
+        paper_bgcolor: '#FFFFFF', // var(--card-bg)
+        font: {
+            family: 'Inter, sans-serif',
+            color: '#333'
+        },
+        titlefont: {
+            size: 18,
+            color: '#333'
+        }
     };
     Plotly.newPlot('wavePeriodChart', [traceMwp, tracePp1d], layoutWavePeriod);
 
-    // Chart 2: Wave Height (swh) & Wind Speed (wind) - Corrected chart ID
+    // Chart 2: Wave Height (swh) & Wind Speed (wind)
     const swhValues = predictions.map(p => p.predictions.swh);
     const windValues = predictions.map(p => p.predictions.wind);
 
@@ -139,7 +147,7 @@ function plotCharts(predictions) {
         y: swhValues,
         mode: 'lines+markers',
         name: variables['swh'],
-        line: { color: '#48bb78' },
+        line: { color: '#FFC107' }, // accent-color
         yaxis: 'y1'
     };
     const traceWind = {
@@ -147,16 +155,24 @@ function plotCharts(predictions) {
         y: windValues,
         mode: 'lines+markers',
         name: variables['wind'],
-        line: { color: '#ed8936' },
+        line: { color: '#E91E63' }, // A new color for wind, contrasting with others
         yaxis: 'y2'
     };
-    const layoutWaveHeightAndWind = { // Corrected layout name
+    const layoutWaveHeightAndWind = {
         title: 'Significant Wave Height & Wind Speed Predictions',
         xaxis: { title: 'Time' },
-        yaxis: { title: 'Wave Height (m)', side: 'left', showgrid: false },
-        yaxis2: { title: 'Wind Speed (m/s)', side: 'right', overlaying: 'y', showgrid: false },
-        plot_bgcolor: '#f8f9ff',
-        paper_bgcolor: 'white'
+        yaxis: { title: 'Wave Height (m)', side: 'left', showgrid: false, zeroline: false },
+        yaxis2: { title: 'Wind Speed (m/s)', side: 'right', overlaying: 'y', showgrid: false, zeroline: false },
+        plot_bgcolor: '#F7F9FC',
+        paper_bgcolor: '#FFFFFF',
+        font: {
+            family: 'Inter, sans-serif',
+            color: '#333'
+        },
+        titlefont: {
+            size: 18,
+            color: '#333'
+        }
     };
     Plotly.newPlot('waveHeightAndWindChart', [traceSwh, traceWind], layoutWaveHeightAndWind);
 
@@ -186,16 +202,24 @@ function plotSummaryChart(currentPredictions) {
         y: currentValues,
         type: 'bar',
         marker: {
-            color: ['#48bb78', '#667eea', '#764ba2', '#ed8936'], // Colors corresponding to swh, mwp, pp1d, wind
+            color: ['#FFC107', '#4A90E2', '#50B7C6', '#E91E63'], // Colors corresponding to swh, mwp, pp1d, wind matching new palette
             opacity: 0.8
         }
     };
 
     const layout = {
         title: 'Current Conditions Summary',
-        yaxis: {title: 'Value'},
-        plot_bgcolor: '#f8f9ff',
-        paper_bgcolor: 'white'
+        yaxis: {title: 'Value', zeroline: false},
+        plot_bgcolor: '#F7F9FC',
+        paper_bgcolor: '#FFFFFF',
+        font: {
+            family: 'Inter, sans-serif',
+            color: '#333'
+        },
+        titlefont: {
+            size: 18,
+            color: '#333'
+        }
     };
 
     Plotly.newPlot('summaryChart', [trace], layout);
