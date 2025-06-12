@@ -5,6 +5,8 @@ import plotly.graph_objs as go
 import plotly.utils
 import json
 import os
+import csv
+from flask import Response
 
 app = Flask(__name__)
 predictor = WavePredictor()
@@ -23,36 +25,38 @@ def get_variables():
     # This will return only the 4 selected variables
     return jsonify(predictor.variables)
 
-@app.route('/api/predict/<location>')
-def predict(location):
+@app.route('/api/predict_csv/<location>')
+def predict_csv(location):
     steps = request.args.get('steps', 8, type=int)
     predictions = predictor.get_predictions(location, steps)
-    
     if predictions is None:
         return jsonify({"error": "Location not found"}), 404
-    
-    return jsonify(predictions)
+
+    # Prepare CSV
+    def generate():
+        header = ['timestamp', 'step'] + list(predictor.variables.keys())
+        yield ','.join(header) + '\n'
+        for p in predictions:
+            row = [p['timestamp'], str(p['step'])] + [str(p['predictions'][k]) for k in predictor.variables.keys()]
+            yield ','.join(row) + '\n'
+    return Response(generate(), mimetype='text/csv',
+                    headers={"Content-Disposition": f"attachment;filename={location}_predictions.csv"})
 
 @app.route('/api/map')
 def get_map():
-    # Create map centered on Indian Ocean
     m = folium.Map(
         location=[5.0, 80.0],
         zoom_start=4,
-        tiles='OpenStreetMap'
+        tiles='CartoDB positron',
+        control_scale=True
     )
-    
-    # Add markers for each location
     for location, (lat, lon) in predictor.locations.items():
         folium.Marker(
             [lat, lon],
-            popup=f"<b>{location}</b><br>Click for wave predictions",
+            popup=folium.Popup(f"<b>{location}</b><br><button onclick=\"selectLocation('{location}')\">Select this location</button>", max_width=300),
             tooltip=location,
-            # Removed emoji, using 'info-sign' as a standard icon from Font Awesome (often available in Folium's default icon set)
-            icon=folium.Icon(color='blue', icon='info-sign') 
+            icon=folium.Icon(color='blue', icon='info-sign')
         ).add_to(m)
-
-    # Convert map to HTML string
     map_html = m._repr_html_()
     return map_html
 
