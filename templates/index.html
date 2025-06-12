@@ -16,6 +16,10 @@
         <header class="header">
             <h1>Aurora Wave Predictions</h1>
             <p>Real-time coastal wave monitoring using Microsoft's Aurora Wave model for key oceanographic variables.</p>
+            <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+                <div class="spinner"></div>
+                <div>Loading predictions...</div>
+            </div>
             <div class="variables-info">
                 <span class="var-tag">Significant Wave Height (SWH)</span>
                 <span class="var-tag">Mean Wave Period (MWP)</span>
@@ -51,6 +55,10 @@
                     Get Wave Predictions
                 </button>
 
+                <button id="downloadCsvBtn" class="download-button" style="margin-top: 10px; display:none;">
+                    Download Predictions (CSV)
+                </button>
+
                 <div class="current-conditions" id="currentConditions" style="display: none;">
                     <h4>Latest Forecasted Conditions</h4>
                     <div id="conditionsData"></div>
@@ -72,6 +80,22 @@
             <div class="chart-container">
                 <h3>Current Forecast Summary</h3>
                 <div id="summaryChart"></div>
+            </div>
+            <div class="chart-container">
+                <h3>Current Wave Height Across Locations</h3>
+                <div id="waveHeightHeatmap"></div>
+            </div>
+            <div class="chart-container">
+                <h3>Wind Rose (Direction & Speed)</h3>
+                <div id="windRoseChart"></div>
+            </div>
+            <div class="chart-container">
+                <h3>Animated Wave Height Forecast</h3>
+                <div id="waveHeightAnimation"></div>
+            </div>
+            <div class="chart-container">
+                <h3>Animated Wave Height Forecast</h3>
+                <div id="waveHeightAnimation"></div>
             </div>
         </div>
     </div>
