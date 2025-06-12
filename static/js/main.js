@@ -49,6 +49,13 @@ function setupEventListeners() {
             getPredictions(location, steps);
         }
     });
+    $('#downloadCsvBtn').click(function() {
+        const location = $('#locationSelect').val();
+        const steps = $('#stepsSlider').val();
+        if (location) {
+            window.open(`/api/predict_csv/${location}?steps=${steps}`, '_blank');
+        }
+    });
 }
 
 function updateLocationSelector() {
@@ -70,33 +77,51 @@ function loadMap() {
 }
 
 function getPredictions(location, steps) {
-    $('#loadingOverlay').show(); // Show loading indicator
-    $('#predictBtn').prop('disabled', true); // Disable button during prediction
-    $('#currentConditions').hide(); // Hide current conditions until new data
+    // Show loading indicator and disable the prediction button
+    $('#loadingOverlay').show();
+    $('#predictBtn').prop('disabled', true); // Disable button immediately
+    $('#currentConditions').hide(); // Hide current conditions display initially
     
+    // Make an AJAX GET request to your Flask backend for predictions
     $.get(`/api/predict/${location}?steps=${steps}`, function(data) {
-        currentPredictions = data;
+        currentPredictions = data; // Store the fetched prediction data
+        
         if (currentPredictions.length > 0) {
+            // If predictions are available, plot the charts and show current conditions
             plotCharts(currentPredictions);
-            showCurrentConditions(currentPredictions[0]); // Show first prediction as current
+            showCurrentConditions(currentPredictions[0]); 
             $('#currentConditions').show();
+            highlightExtremeEvents(currentPredictions);            
+            // Show the download CSV button
+            $('#downloadCsvBtn').show(); 
         } else {
+            // If no predictions are available, alert the user and clear the charts
             alert('No predictions available for this location.');
-            // Clear charts if no predictions
             Plotly.newPlot('wavePeriodChart', [], {});
             Plotly.newPlot('waveHeightAndWindChart', [], {});
             Plotly.newPlot('summaryChart', [], {});
+            
+            // Hide the download CSV button
+            $('#downloadCsvBtn').hide(); 
         }
     }).fail(function(jqXHR, textStatus, errorThrown) {
+        // Handle any errors during the API call
         console.error("Prediction API error:", textStatus, errorThrown, jqXHR.responseText);
         alert('Error getting predictions: ' + (jqXHR.responseJSON ? jqXHR.responseJSON.error : 'Unknown error'));
+        
         // Clear charts on error
         Plotly.newPlot('wavePeriodChart', [], {});
         Plotly.newPlot('waveHeightAndWindChart', [], {});
         Plotly.newPlot('summaryChart', [], {});
+
+        // Hide the download CSV button on error
+        $('#downloadCsvBtn').hide();
     }).always(function() {
-        $('#loadingOverlay').hide(); // Hide loading indicator
-        $('#predictBtn').prop('disabled', false); // Re-enable button
+        // This runs regardless of success or failure (both .done() and .fail() calls)
+        // Hide the loading indicator
+        $('#loadingOverlay').hide(); 
+        // Re-enable the prediction button
+        $('#predictBtn').prop('disabled', false); 
     });
 }
 
@@ -123,8 +148,10 @@ function plotCharts(predictions) {
     };
     const layoutWavePeriod = {
         title: 'Wave Period Predictions (Mean & Peak)',
-        xaxis: { title: 'Time' },
-        yaxis: { title: 'Period (s)' },
+        hovermode: 'x unified',
+        xaxis: { title: 'Time', showgrid: true},
+        yaxis: { title: 'Period (s)', showgrid: true},
+        margin: { t: 50, l: 60, r: 30, b: 50 },
         plot_bgcolor: '#F7F9FC', // var(--bg-light)
         paper_bgcolor: '#FFFFFF', // var(--card-bg)
         font: {
@@ -160,9 +187,11 @@ function plotCharts(predictions) {
     };
     const layoutWaveHeightAndWind = {
         title: 'Significant Wave Height & Wind Speed Predictions',
-        xaxis: { title: 'Time' },
-        yaxis: { title: 'Wave Height (m)', side: 'left', showgrid: false, zeroline: false },
+        hovermode: 'x unified',
+        xaxis: { title: 'Time', showgrid: true },
+        yaxis: { title: 'Wave Height (m)', side: 'left', showgrid: true, zeroline: false },
         yaxis2: { title: 'Wind Speed (m/s)', side: 'right', overlaying: 'y', showgrid: false, zeroline: false },
+        margin: { t: 50, l: 60, r: 60, b: 50 },
         plot_bgcolor: '#F7F9FC',
         paper_bgcolor: '#FFFFFF',
         font: {
@@ -179,6 +208,8 @@ function plotCharts(predictions) {
 
     // Chart 3: Summary Bar Chart for current conditions
     plotSummaryChart(predictions);
+    plotWindRose(predictions);
+    plotWaveHeightAnimation(predictions);
 }
 
 function plotSummaryChart(currentPredictions) {
@@ -210,6 +241,8 @@ function plotSummaryChart(currentPredictions) {
     const layout = {
         title: 'Current Conditions Summary',
         yaxis: {title: 'Value', zeroline: false},
+        hovermode: 'closest',
+        margin: { t: 50, l: 60, r: 30, b: 50 },
         plot_bgcolor: '#F7F9FC',
         paper_bgcolor: '#FFFFFF',
         font: {
@@ -223,6 +256,147 @@ function plotSummaryChart(currentPredictions) {
     };
 
     Plotly.newPlot('summaryChart', [trace], layout);
+}
+
+function plotWaveHeightHeatmap() {
+    // Fetch current SWH for all locations
+    $.when(
+        $.get('/api/locations'),
+        $.get('/api/variables')
+    ).done(function(locData, varData) {
+        const locs = locData[0];
+        const varCodes = varData[0];
+        const promises = Object.keys(locs).map(loc =>
+            $.get(`/api/predict/${loc}?steps=1`).then(data => ({
+                location: loc,
+                lat: locs[loc][0],
+                lon: locs[loc][1],
+                swh: data.length > 0 ? data[0].predictions.swh : null
+            }))
+        );
+        Promise.all(promises).then(results => {
+            const lats = results.map(r => r.lat);
+            const lons = results.map(r => r.lon);
+            const swhs = results.map(r => r.swh);
+
+            const trace = {
+                type: 'scattergeo',
+                mode: 'markers',
+                lat: lats,
+                lon: lons,
+                text: results.map(r => `${r.location}: ${r.swh} m`),
+                marker: {
+                    size: 18,
+                    color: swhs,
+                    colorscale: 'YlGnBu',
+                    colorbar: { title: 'SWH (m)' }
+                }
+            };
+            const layout = {
+                geo: {
+                    scope: 'world',
+                    projection: { type: 'natural earth' },
+                    showland: true,
+                    landcolor: '#F7F9FC'
+                },
+                margin: { t: 30, l: 0, r: 0, b: 0 }
+            };
+            Plotly.newPlot('waveHeightHeatmap', [trace], layout);
+        });
+    });
+}
+// Call this after page load
+$(document).ready(function() {
+    plotWaveHeightHeatmap();
+});
+
+function plotWindRose(predictions) {
+    // For demo: use random wind direction if not available
+    const windSpeeds = predictions.map(p => p.predictions.wind);
+    const windDirs = predictions.map(p => p.predictions.wind_dir || Math.floor(Math.random() * 360));
+
+    const trace = {
+        type: 'barpolar',
+        r: windSpeeds,
+        theta: windDirs,
+        name: 'Wind Speed',
+        marker: {
+            color: windSpeeds,
+            colorscale: 'Blues',
+            line: { color: '#333' }
+        }
+    };
+    const layout = {
+        title: 'Wind Rose',
+        polar: {
+            radialaxis: { ticksuffix: ' m/s', angle: 45, dtick: 2 },
+            angularaxis: { direction: "clockwise" }
+        },
+        margin: { t: 50, l: 30, r: 30, b: 30 },
+        plot_bgcolor: '#F7F9FC',
+        paper_bgcolor: '#FFFFFF',
+        font: { family: 'Inter, sans-serif', color: '#333' }
+    };
+    Plotly.newPlot('windRoseChart', [trace], layout);
+}
+
+function plotWaveHeightAnimation(predictions) {
+    const timestamps = predictions.map(p => new Date(p.timestamp));
+    const swhValues = predictions.map(p => p.predictions.swh);
+
+    const trace = {
+        x: timestamps,
+        y: swhValues,
+        mode: 'lines+markers',
+        name: variables['swh'],
+        line: { color: '#FFC107' }
+    };
+
+    const frames = swhValues.map((swh, i) => ({
+        name: i,
+        data: [{
+            x: timestamps.slice(0, i + 1),
+            y: swhValues.slice(0, i + 1),
+            mode: 'lines+markers',
+            line: { color: '#FFC107' }
+        }]
+    }));
+
+    const layout = {
+        title: 'Wave Height Forecast Animation',
+        xaxis: { title: 'Time' },
+        yaxis: { title: 'Wave Height (m)' },
+        updatemenus: [{
+            type: 'buttons',
+            showactive: false,
+            buttons: [{
+                label: 'Play',
+                method: 'animate',
+                args: [null, { fromcurrent: true, frame: { duration: 500, redraw: true }, transition: { duration: 0 } }]
+            }]
+        }],
+        plot_bgcolor: '#F7F9FC',
+        paper_bgcolor: '#FFFFFF',
+        font: { family: 'Inter, sans-serif', color: '#333' }
+    };
+
+    Plotly.newPlot('waveHeightAnimation', [trace], layout).then(function() {
+        Plotly.addFrames('waveHeightAnimation', frames);
+    });
+}
+
+function highlightExtremeEvents(predictions) {
+    const extremeSWH = predictions.filter(p => p.predictions.swh > 3);
+    const extremeWind = predictions.filter(p => p.predictions.wind > 10);
+
+    let html = '';
+    if (extremeSWH.length > 0) {
+        html += `<div class="error-message">⚠️ High Wave Height (&gt;3m) at: ${extremeSWH.map(p => new Date(p.timestamp).toLocaleString()).join(', ')}</div>`;
+    }
+    if (extremeWind.length > 0) {
+        html += `<div class="error-message">⚠️ High Wind Speed (&gt;10 m/s) at: ${extremeWind.map(p => new Date(p.timestamp).toLocaleString()).join(', ')}</div>`;
+    }
+    $('#currentConditions').prepend(html);
 }
 
 function showCurrentConditions(firstPrediction) {
@@ -249,3 +423,8 @@ function showCurrentConditions(firstPrediction) {
     `;
     $('#conditionsData').html(html);
 }
+
+function selectLocation(locationName) {
+    $('#locationSelect').val(locationName).trigger('change');
+}
+window.selectLocation = selectLocation;
